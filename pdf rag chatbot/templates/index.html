@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF RAG Chat</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>📄 PDF RAG Chat</h1>
+        <p class="subtitle">Upload a PDF and ask questions about its content</p>
+
+        <!-- Upload Section -->
+        <div class="upload-section">
+            <form id="uploadForm" enctype="multipart/form-data">
+                <input type="file" id="pdfFile" accept=".pdf" required>
+                <button type="submit" id="uploadBtn">Upload & Process PDF</button>
+            </form>
+            <div id="uploadStatus"></div>
+        </div>
+
+        <!-- Question Section -->
+        <div class="question-section" id="questionSection" style="display: none;">
+            <form id="questionForm">
+                <label>Ask a question about the PDF:</label>
+                <textarea id="question" placeholder="What is this document about?" required></textarea>
+                
+                <div class="button-group">
+                    <button type="submit" id="askBtn">🚀 Ask Question</button>
+                    <button type="button" id="summarizeBtn">📋 Summarize PDF</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Answer Section -->
+        <div id="answerSection" class="answer-section" style="display: none;">
+            <h3>Answer</h3>
+            <div id="answerText"></div>
+            
+            <h4>Sources / Citations</h4>
+            <div id="sources"></div>
+        </div>
+    </div>
+
+    <script>
+        let pdfProcessed = false;
+
+        // Upload PDF
+        document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData();
+            const file = document.getElementById('pdfFile').files[0];
+            formData.append('pdf', file);
+
+            const status = document.getElementById('uploadStatus');
+            status.innerHTML = 'Processing PDF... Please wait.';
+
+            const response = await fetch('/', { method: 'POST', body: formData });
+            const result = await response.json();
+            
+            if (result.status === "success") {
+                status.innerHTML = `✅ PDF processed successfully! (${result.chunks} chunks)`;
+                pdfProcessed = true;
+                document.getElementById('questionSection').style.display = 'block';
+            } else {
+                status.innerHTML = `❌ Error processing PDF`;
+            }
+        });
+
+        // Ask Normal Question
+        document.getElementById('questionForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await sendQuestion(document.getElementById('question').value);
+        });
+
+        // Summarize Button
+        document.getElementById('summarizeBtn').addEventListener('click', async () => {
+            await sendQuestion("Summarize the entire document in a clear and concise way.");
+        });
+
+        async function sendQuestion(question) {
+            const answerSection = document.getElementById('answerSection');
+            const answerText = document.getElementById('answerText');
+            const sourcesDiv = document.getElementById('sources');
+
+            answerText.innerHTML = 'Thinking...';
+            answerSection.style.display = 'block';
+
+            const formData = new FormData();
+            formData.append('question', question);
+
+            const response = await fetch('/', {
+                method: 'POST',
+                body: formData
+            });
+
+            const result = await response.json();
+
+            answerText.innerHTML = result.answer || "No answer generated.";
+            
+            sourcesDiv.innerHTML = '';
+            if (result.sources && result.sources.length > 0) {
+                result.sources.forEach((source, i) => {
+                    const p = document.createElement('p');
+                    p.textContent = `Source ${i+1}: ${source}`;
+                    sourcesDiv.appendChild(p);
+                });
+            }
+        }
+    </script>
+</body>
+</html>

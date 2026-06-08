@@ -1,0 +1,8 @@
+flask
+langchain
+langchain-community
+langchain-ollama
+langchain-groq
+langchain-chroma
+pypdf
+chromadb
